@@ -118,8 +118,7 @@ fn or<A>(pa1: impl Parser<A>, pa2: impl Parser<A>) -> impl Parser<A> {
     move |input: String| pa1.parse(input.clone()).or(pa2.parse(input))
 }
 
-fn many<A: Clone, F>(pa: F) -> impl Parser<Vec<A>>
-where F: Fn(String) -> Option<ParseResult<A>>
+fn many<A: Clone>(pa: impl Parser<A>) -> impl Parser<Vec<A>>
 {
     move |input: String| match pa.parse(input.clone()) {
         Some(ParseResult { value, s }) => map2(unit_p(value), many(pa), |value, vs| {
@@ -134,17 +133,6 @@ where F: Fn(String) -> Option<ParseResult<A>>
         }),
     }
 }
-
-// fn many1<A: Clone>(pa: impl Parser<A>) -> impl Parser<Vec<A>> {
-//     map2(
-//         pa,
-//         or(many(pa), unit_p(Vec::new())),
-//         |x, mut xs| {
-//             xs.insert(0, x);
-//             xs
-//         }
-//     )
-// }
 
 #[cfg(test)]
 mod tests {
