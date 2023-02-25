@@ -51,7 +51,7 @@ fn unit_p<T: Clone>(value: T) -> impl Parser<T> {
 //     }
 // }
 
-fn string_p(s: String) -> impl Parser<String> {
+fn string_p(s: String) -> impl Parser<String> + Clone {
     move |input: String| {
         if input.starts_with(&s) {
             Some(ParseResult {
@@ -118,10 +118,10 @@ fn or<A>(pa1: impl Parser<A>, pa2: impl Parser<A>) -> impl Parser<A> {
     move |input: String| pa1.parse(input.clone()).or(pa2.parse(input))
 }
 
-fn many<A: Clone>(pa: impl Parser<A>) -> impl Parser<Vec<A>>
+fn many<A: Clone>(pa: impl Parser<A> + Clone) -> impl Parser<Vec<A>>
 {
     move |input: String| match pa.parse(input.clone()) {
-        Some(ParseResult { value, s }) => map2(unit_p(value), many(pa), |value, vs| {
+        Some(ParseResult { value, s }) => map2(unit_p(value), many(pa.clone()), |value, vs| {
             let mut v = vec![value];
             v.extend(vs);
             v
