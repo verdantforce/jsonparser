@@ -70,7 +70,7 @@ where
 {
     move |input: String| {
         let parsed: String = input.chars().take_while(|c| f(c)).collect();
-        let rest: String = input.chars().skip_while(|c| !f(c)).collect();
+        let rest: String = input.chars().skip_while(|c| f(c)).collect();
         Some(ParseResult {
             value: parsed,
             s: rest,
@@ -218,6 +218,7 @@ mod tests {
         );
     }
 
+    #[test]
     fn test_fmap() {
         let pa = string_p("hello".to_owned());
         let pb = fmap(pa, |s| s.len());
@@ -230,6 +231,7 @@ mod tests {
         );
     }
 
+    #[test]
     fn test_while_p() {
         let pa = while_p(|&c| c == 'h');
         assert_eq!(
@@ -241,15 +243,17 @@ mod tests {
         );
     }
 
+    #[test]
     fn test_many() {
         let pa = string_p("a".to_owned());
         let pb = many(pa);
-        let expected_value = vec!['a', 'a', 'a', 'a', 'a'];
+        let expected_value:Vec<String> = vec!["a".to_string(); 5];
         if let Some(ParseResult{value, s}) = pb.parse("aaaaabbbb".to_owned()) {
-            assert_eq!(value.iter().zip(&expected_value).filter(|&(a, b)| a.chars().nth(0).unwrap() == *b).count(), 5);
+            assert_eq!(value.join(""), "aaaaa");
             assert_eq!(s, "bbbb".to_owned());
         } else {
             panic!("parse failed!");
         }
     }
+
 }
