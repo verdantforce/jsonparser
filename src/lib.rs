@@ -1,231 +1,267 @@
-// #![allow(unused_imports)]
-// #![allow(dead_code)]
-// use std::{collections::HashMap, ops};
+#![allow(unused_imports)]
+#![allow(dead_code)]
+use std::{collections::HashMap, ops, vec};
 
-// #[derive(Debug, Clone)]
-// pub enum JsonValue {
-//     JsonNull,
-//     JsonBool(bool),
-//     JsonNumber(i64), // TODO(make this parse floats etc later)
-//     JsonString(String),
-//     JsonArray(Box<Vec<JsonValue>>),
-//     JsonObject(Box<HashMap<String, JsonValue>>),
-// }
-
-// #[derive(Debug, PartialEq)]
-// pub struct ParseResult<T> {
-//     value: T,
-//     s: String, // TODO: should this be &str instead?
-// }
-
-// pub trait Parser<T> {
-//     fn parse(&self, s: &str) -> Option<ParseResult<T>>;
-// }
-
-// struct StringP(String);
-
-// impl Parser<String> for StringP {
-//     fn parse(&self, s: &str) -> Option<ParseResult<String>> {
-//         if !s.is_empty() && s.starts_with(&self.0) {
-//             Some(ParseResult {
-//                 value: self.0.to_owned(),
-//                 s: s[1..].to_owned(),
-//             })
-//         } else {
-//             None
-//         }
-//     }
-// }
-
-// struct ConstantP<T>(T);
-
-// impl<T: Clone> Parser<T> for ConstantP<T> {
-//     fn parse(&self, s: &str) -> Option<ParseResult<T>> {
-//         Some(ParseResult {
-//             value: self.0.to_owned(),
-//             s: s.to_owned(),
-//         })
-//     }
-// }
-
-// struct FlatMapP<A, B> {
-//     p: Box<dyn Parser<A>>,
-//     f: fn(A) -> dyn Parser<B>,
-// }
-
-// impl<A, B> Parser<B> for FlatMapP<A, B> {
-//     fn parse(&self, s: &str) -> Option<ParseResult<B>> {    
-//         self.p.parse(s).and_then(|pr| {
-//             let ParseResult {value: a, s: s1} = pr;
-//             let p2 = (self.f)(a);
-//             p2.parse(s)
-//         })
-//     }
-// }
-
-// // impl<A, B, C> Parser<C> for ChainP<A, B, C> {
-// //     fn parse(&self, s: &str) -> Option<ParseResult<C>> {
-// //         self.p1.parse(s).and_then(|psa| {
-// //             self.p2.parse(&psa.s).and_then(|psb| {
-// //                 let c = (self.f)(psa.value, psb.value);
-// //                 Some(ParseResult { value: c, s: psb.s })
-// //             })
-// //         })
-// //     }
-// // }
-
-// impl<T> Parser<T> for &dyn Parser<T> {
-//     fn parse(&self, s: &str) -> Option<ParseResult<T>> {
-//         self.parse(s)
-//     }
-// }
-
-// // fn map2<A, B, C>(
-// //     p1: &dyn Parser<'static, A>,
-// //     p2: &dyn Parser<B>,
-// //     f: &dyn Fn(A, B) -> C,
-// // ) -> impl Parser<C> {
-// //     ChainP {
-// //         p1: Box::new(p1),
-// //         p2: Box::new(p2),
-// //         f: Box::new(f),
-// //     }
-// // }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn stringp_success() {
-//         let p1 = StringP("hel".to_owned());
-//         assert_eq!(
-//             p1.parse("hello"),
-//             Some(ParseResult {
-//                 value: "hel".to_owned(),
-//                 s: "ello".to_owned(),
-//             })
-//         );
-//     }
-
-//     #[test]
-//     fn stringp_fail() {
-//         let p = StringP("fre".to_owned());
-//         assert!(p.parse("friend").is_none());
-//     }
-
-//     fn constantp_int() {
-//         let p = ConstantP(1);
-//         assert_eq!(
-//             p.parse("hello"),
-//             Some(ParseResult {
-//                 value: 1,
-//                 s: "hello".to_owned(),
-//             })
-//         );
-//     }
-
-//     fn constantp_string() {
-//         let p = ConstantP("hello".to_owned());
-//         assert_eq!(
-//             p.parse("hello"),
-//             Some(ParseResult {
-//                 value: "hello".to_owned(),
-//                 s: "hello".to_owned(),
-//             })
-//         );
-//     }
-
-//     fn chainp_success() {
-//         let p1 = StringP("he".to_owned());
-//         let p2 = StringP("llo".to_owned());
-//         let p = ChainP {
-//             p1: p1,
-//             p2: p2,
-//             f: |a, b| format!("{}{}", a, b),
-//         };
-//         assert_eq!(
-//             p.parse("hello"),
-//             Some(ParseResult {
-//                 value: "hello".to_owned(),
-//                 s: "".to_owned(),
-//             })
-//         );
-//     }
-// }
-
-// // struct Parser<T>(impl Fn(String) -> Option<ParseResult<T>>);
-
-// // allow for syntax let parser = parser1 | parser2;
-// // impl ops::BitOr for JsonParser {
-// //     type Output = Self;
-
-// //     fn bitor(self, rhs: Self) -> Self::Output {
-// //         let JsonParser(f1) = self;
-// //         let JsonParser(f2) = rhs;
-
-// //         // let f = |s| {
-// //         //     f1(s).or_else(move || f2(s.to_owned()))
-// //         // };
-// //         // JsonParser(f)
-// //         self
-// //         // unimplemented!()
-// //     }
-// // }
+#[derive(Debug, Clone)]
+pub enum JsonValue {
+    JsonNull,
+    JsonBool(bool),
+    JsonNumber(i64), // TODO(make this parse floats etc later)
+    JsonString(String),
+    JsonArray(Vec<Box<JsonValue>>),
+    JsonObject(HashMap<String, Box<JsonValue>>),
+}
 
 #[derive(Debug, PartialEq)]
 pub struct ParseResult<T> {
     value: T,
-    s: String, // TODO: should this be &str instead?
+    s: String, // stores the rest of unparsed string
 }
 
+// Parser is a Monad
 pub trait Parser<T> {
-    fn parse(&self, s: &str) -> Option<ParseResult<T>>;
+    fn parse(&self, s: String) -> Option<ParseResult<T>>;
 }
 
-fn fmap<A, B>(p: dyn Parser<A>, f: Fn(A) -> B) -> dyn Parser<B> {
-    let x = |s| {
-        p.parse(s).map(
-            |pr| {
-                ParseResult {
-                    value: f(pr.value),
-                    s: pr.s
-                }
-            }
+impl<T, F> Parser<T> for F
+where
+    F: Fn(String) -> Option<ParseResult<T>>,
+{
+    fn parse(&self, s: String) -> Option<ParseResult<T>> {
+        self(s)
+    }
+}
+
+fn unit_p<T: Clone>(value: T) -> impl Parser<T> {
+    move |input: String| {
+        Some(ParseResult {
+            value: value.clone(),
+            s: input.clone(),
+        })
+    }
+}
+
+// fn flatmap<A, B, F>(pa: impl Parser<A>, f: F) -> impl Parser<B>
+// where
+//     F: Fn(A) -> dyn Parser<B>,
+// {
+//     move |input: String| {
+//         pa.parse(input)
+//             .and_then(|ParseResult { value, s }| f(value).parse(s))
+//     }
+// }
+
+fn string_p(s: String) -> impl Parser<String> {
+    move |input: String| {
+        if input.starts_with(&s) {
+            Some(ParseResult {
+                value: s.clone(),
+                s: input[s.len()..].to_owned(),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+fn while_p<F>(f: F) -> impl Parser<String>
+where
+    F: Fn(&char) -> bool,
+{
+    move |input: String| {
+        let parsed: String = input.chars().take_while(|c| f(c)).collect();
+        let rest: String = input.chars().skip_while(|c| !f(c)).collect();
+        Some(ParseResult {
+            value: parsed,
+            s: rest,
+        })
+    }
+}
+
+fn map2<A, B, C, F>(pa: impl Parser<A>, pb: impl Parser<B>, f: F) -> impl Parser<C>
+where
+    F: Fn(A, B) -> C,
+{
+    move |input: String| {
+        pa.parse(input).and_then(
+            |ParseResult {
+                 value: a,
+                 s: input_a,
+             }| {
+                pb.parse(input_a).and_then(
+                    |ParseResult {
+                         value: b,
+                         s: input_b,
+                     }| {
+                        Some(ParseResult {
+                            value: f(a, b),
+                            s: input_b,
+                        })
+                    },
+                )
+            },
         )
     }
 }
 
-fn flatmap<A, B>(p: Parser<A>, f: Fn(A) -> Parser<B>) -> Parser<B> {
-    |s| {
-        p.parse(s).and_then(|pr| {
-            let pb = f(pr.value);
-            pb.parse(&pr.s)
-        })
+fn fmap<A, B, F>(pa: impl Parser<A>, f: F) -> impl Parser<B>
+where
+    F: Fn(A) -> B,
+{
+    move |input: String| {
+        pa.parse(input)
+            .map(|ParseResult { value, s }| ParseResult { value: f(value), s })
     }
 }
 
-fn or<A>(p1: Parser<A>, p2: Parse<A>) -> Parser<A> {
-    |s| {
-        p1.parse(s).or_else(|| {
-            p2.parse(s)
+fn or<A>(pa1: impl Parser<A>, pa2: impl Parser<A>) -> impl Parser<A> {
+    move |input: String| pa1.parse(input.clone()).or(pa2.parse(input))
+}
+
+fn many<A: Clone, F>(pa: F) -> impl Parser<Vec<A>>
+where F: Fn(String) -> Option<ParseResult<A>>
+{
+    move |input: String| match pa.parse(input.clone()) {
+        Some(ParseResult { value, s }) => map2(unit_p(value), many(pa), |value, vs| {
+            let mut v = vec![value];
+            v.extend(vs);
+            v
         })
+        .parse(s),
+        None => Some(ParseResult {
+            value: Vec::new(),
+            s: input,
+        }),
     }
 }
 
-fn many(p: Parser<A>) -> Parser<Vec<A>> {
-    |s| {
-        match p.parse(s) {
-            Some(pr) => {
-                let many_p = many(p);
-                flatmap(many_p, |&vec| {
-                    let final_result = Vec::new();
-                    final_result.push(pr.value);
-                    final_result.extend(vec);
-                    final_result
-                })
-            }
-            None => Some(ParseResult { value: Vec::new(), s: s.to_owned()})
+// fn many1<A: Clone>(pa: impl Parser<A>) -> impl Parser<Vec<A>> {
+//     map2(
+//         pa,
+//         or(many(pa), unit_p(Vec::new())),
+//         |x, mut xs| {
+//             xs.insert(0, x);
+//             xs
+//         }
+//     )
+// }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_p_success() {
+        let p1 = string_p("hel".to_owned());
+        assert_eq!(
+            p1.parse("hello".to_owned()),
+            Some(ParseResult {
+                value: "hel".to_owned(),
+                s: "lo".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_string_p_fail() {
+        let p = string_p("fre".to_owned());
+        assert!(p.parse("friend".to_owned()).is_none());
+    }
+
+    #[test]
+    fn test_constant_p_int() {
+        let p = unit_p(1);
+        assert_eq!(
+            p.parse("hello".to_owned()),
+            Some(ParseResult {
+                value: 1,
+                s: "hello".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_constant_p_string() {
+        let p = unit_p("world".to_owned());
+        assert_eq!(
+            p.parse("hello".to_owned()),
+            Some(ParseResult {
+                value: "world".to_owned(),
+                s: "hello".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_map2() {
+        // test chaining 2 parsers together using map2
+        let pa = string_p("hello".to_owned());
+        let pb = string_p("world".to_owned());
+        let f = |a: String, b: String| a.clone() + &b;
+        let pc = map2(pa, pb, f);
+        assert_eq!(
+            pc.parse("helloworldfriend".to_owned()),
+            Some(ParseResult {
+                value: "helloworld".to_owned(),
+                s: "friend".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_or() {
+        // test chaining 2 parsers together using map2
+        let pa = string_p("hello".to_owned());
+        let pb = string_p("world".to_owned());
+        let pc = or(pa, pb);
+        assert_eq!(
+            pc.parse("hello".to_owned()),
+            Some(ParseResult {
+                value: "hello".to_owned(),
+                s: "".to_owned(),
+            })
+        );
+        assert_eq!(
+            pc.parse("world".to_owned()),
+            Some(ParseResult {
+                value: "world".to_owned(),
+                s: "".to_owned(),
+            })
+        );
+    }
+
+    fn test_fmap() {
+        let pa = string_p("hello".to_owned());
+        let pb = fmap(pa, |s| s.len());
+        assert_eq!(
+            pb.parse("hello".to_owned()),
+            Some(ParseResult {
+                value: 5,
+                s: "".to_owned(),
+            })
+        );
+    }
+
+    fn test_while_p() {
+        let pa = while_p(|&c| c == 'h');
+        assert_eq!(
+            pa.parse("hhhello".to_owned()),
+            Some(ParseResult {
+                value: "hhh".to_owned(),
+                s: "ello".to_owned(),
+            })
+        );
+    }
+
+    fn test_many() {
+        let pa = string_p("a".to_owned());
+        let pb = many(pa);
+        let expected_value = vec!['a', 'a', 'a', 'a', 'a'];
+        if let Some(ParseResult{value, s}) = pb.parse("aaaaabbbb".to_owned()) {
+            assert_eq!(value.iter().zip(&expected_value).filter(|&(a, b)| a.chars().nth(0).unwrap() == *b).count(), 5);
+            assert_eq!(s, "bbbb".to_owned());
+        } else {
+            panic!("parse failed!");
         }
     }
 }
